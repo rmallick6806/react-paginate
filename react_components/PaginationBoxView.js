@@ -32,6 +32,7 @@ export default class PaginationBoxView extends Component {
     breakLinkClassName: PropTypes.string,
     extraAriaContext: PropTypes.string,
     ariaLabelBuilder: PropTypes.func,
+    indexByOne: PropTypes.bool,
   };
 
   static defaultProps = {
@@ -46,22 +47,23 @@ export default class PaginationBoxView extends Component {
     breakLabel: '...',
     disabledClassName: 'disabled',
     disableInitialCallback: false,
+    indexByOne: false,
   };
-
+  
   constructor(props) {
     super(props);
 
-    let initialSelected;
+    this.initialSelected = 0;
     if (props.initialPage) {
-      initialSelected = props.initialPage;
+      this.initialSelected = props.initialPage;
     } else if (props.forcePage) {
-      initialSelected = props.forcePage;
+      this.initialSelected = props.forcePage;
     } else {
-      initialSelected = 0;
+      this.initialSelected = props.indexByOne ? 1 : 0;
     }
 
     this.state = {
-      selected: initialSelected,
+      selected: this.initialSelected,
     };
   }
 
@@ -95,17 +97,17 @@ export default class PaginationBoxView extends Component {
   handlePreviousPage = evt => {
     const { selected } = this.state;
     evt.preventDefault ? evt.preventDefault() : (evt.returnValue = false);
-    if (selected > 0) {
+    if (selected > this.initialSelected) {
       this.handlePageSelected(selected - 1, evt);
     }
   };
 
   handleNextPage = evt => {
     const { selected } = this.state;
-    const { pageCount } = this.props;
+    const { pageCount, indexByOne } = this.props;
 
     evt.preventDefault ? evt.preventDefault() : (evt.returnValue = false);
-    if (selected < pageCount - 1) {
+    if (selected < (indexByOne ? pageCount : pageCount - 1)) {
       this.handlePageSelected(selected + 1, evt);
     }
   };
@@ -149,12 +151,12 @@ export default class PaginationBoxView extends Component {
   };
 
   hrefBuilder(pageIndex) {
-    const { hrefBuilder, pageCount } = this.props;
+    const { hrefBuilder, pageCount, indexByOne } = this.props;
     if (
       hrefBuilder &&
       pageIndex !== this.state.selected &&
-      pageIndex >= 0 &&
-      pageIndex < pageCount
+      pageIndex >= this.initialSelected &&
+      pageIndex < (indexByOne ? pageCount + 1 : pageCount)
     ) {
       return hrefBuilder(pageIndex + 1);
     }
@@ -194,6 +196,7 @@ export default class PaginationBoxView extends Component {
       activeClassName,
       activeLinkClassName,
       extraAriaContext,
+      indexByOne,
     } = this.props;
 
     return (
@@ -208,7 +211,7 @@ export default class PaginationBoxView extends Component {
         extraAriaContext={extraAriaContext}
         href={this.hrefBuilder(index)}
         ariaLabel={this.ariaLabelBuilder(index)}
-        page={index + 1}
+        page={indexByOne ? index : index + 1}
       />
     );
   }
@@ -222,12 +225,14 @@ export default class PaginationBoxView extends Component {
       breakLabel,
       breakClassName,
       breakLinkClassName,
+      indexByOne,
     } = this.props;
 
     const { selected } = this.state;
 
     if (pageCount <= pageRangeDisplayed) {
-      for (let index = 0; index < pageCount; index++) {
+      const lastPage = indexByOne ? pageCount + 1 : pageCount;
+      for (let index = this.initialSelected; index < lastPage; index++) {
         items.push(this.getPageElement(index));
       }
     } else {
@@ -250,8 +255,8 @@ export default class PaginationBoxView extends Component {
       let page;
       let breakView;
       let createPageView = index => this.getPageElement(index);
-
-      for (index = 0; index < pageCount; index++) {
+      const lastPage = indexByOne ? pageCount + 1 : pageCount;
+      for (index = this.initialSelected; index < lastPage; index++) {
         page = index + 1;
 
         // If the page index is lower than the margin defined,
@@ -312,15 +317,15 @@ export default class PaginationBoxView extends Component {
       previousLabel,
       nextLinkClassName,
       nextLabel,
+      indexByOne,
     } = this.props;
 
     const { selected } = this.state;
 
     const previousClasses =
-      previousClassName + (selected === 0 ? ` ${disabledClassName}` : '');
-    const nextClasses =
-      nextClassName +
-      (selected === pageCount - 1 ? ` ${disabledClassName}` : '');
+      previousClassName +
+      (selected === this.initialSelected ? ` ${disabledClassName}` : '');
+    const nextClasses = nextClassName + (selected === (indexByOne ? pageCount : pageCount - 1) ? ` ${disabledClassName}` : '');
 
     const previousAriaDisabled = selected === 0 ? 'true' : 'false';
     const nextAriaDisabled = selected === pageCount - 1 ? 'true' : 'false';
